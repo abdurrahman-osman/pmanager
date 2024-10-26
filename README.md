@@ -10,6 +10,7 @@
 ## How to install
 - Make sure to have Golang 1.19 installed.
 - clone the repository.
+- Replace the secret key at Line 17 in main.go.
 - run ````go build -o pmanager main.go```` in root directory of the repository.
 - sudo mv pmanager /usr/local/bin/
 
