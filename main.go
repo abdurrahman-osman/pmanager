@@ -99,7 +99,11 @@ func generatePassword() {
 		length = defaultPasswordLength // Use default if user presses Enter without input
 	}
 
-	password := generateRandomPassword(length)
+	password, err := generateRandomPassword(length)
+	if err != nil {
+		fmt.Println("Error generating password:", err)
+		return
+	}
 	fmt.Printf("Generated Password: %s\n", password)
 
 	fmt.Print("Do you want to save this password? (y/n): ")
@@ -115,18 +119,60 @@ func generatePassword() {
 }
 
 // Generates a random password with specified length
-func generateRandomPassword(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_+="
+func generateRandomPassword(length int) (string, error) {
+	// Ensure minimum length of 8 characters
+	if length < 8 {
+		length = 8
+	}
+
+	const (
+		lowerCharset   = "abcdefghijklmnopqrstuvwxyz"
+		upperCharset   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		digitCharset   = "0123456789"
+		specialCharset = "!@#$%^&*()-_=+"
+	)
+
+	// Ensure at least one character from each required category
+	requiredChars := []byte{
+		upperCharset[getRandomIndex(len(upperCharset))],
+		digitCharset[getRandomIndex(len(digitCharset))],
+		specialCharset[getRandomIndex(len(specialCharset))],
+	}
+
+	// Fill remaining password characters randomly from all sets
+	allCharset := lowerCharset + upperCharset + digitCharset + specialCharset
 	password := make([]byte, length)
-	_, err := rand.Read(password)
+	copy(password, requiredChars)
+
+	for i := len(requiredChars); i < length; i++ {
+		password[i] = allCharset[getRandomIndex(len(allCharset))]
+	}
+
+	// Shuffle password to randomize the order of characters
+	shuffledPassword := shuffle(password)
+
+	return string(shuffledPassword), nil
+}
+
+// Generates a random index within the given limit using crypto/rand
+func getRandomIndex(limit int) int {
+	index := make([]byte, 1)
+	_, err := rand.Read(index)
 	if err != nil {
-		fmt.Println("Error generating password:", err)
-		os.Exit(1)
+		panic(err) // Handle this appropriately in production code
 	}
-	for i, b := range password {
-		password[i] = charset[b%byte(len(charset))]
+	return int(index[0]) % limit
+}
+
+// Shuffles the byte slice for randomness
+func shuffle(slice []byte) []byte {
+	shuffled := make([]byte, len(slice))
+	copy(shuffled, slice)
+	for i := range shuffled {
+		j := getRandomIndex(len(shuffled))
+		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
 	}
-	return string(password)
+	return shuffled
 }
 
 // Encrypts and saves the password for the given website
